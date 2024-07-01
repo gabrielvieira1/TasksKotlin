@@ -14,6 +14,8 @@ import com.android.taskskotlin.service.repository.PersonRepository
 import com.android.taskskotlin.service.repository.PriorityRepository
 import com.android.taskskotlin.service.repository.SecurityPreferences
 import com.android.taskskotlin.service.repository.remote.RetrofitClient
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.analytics
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -31,6 +33,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
      * Faz login usando API
      */
     fun doLogin(email: String, password: String) {
+        Firebase.analytics.logEvent("log_button_click", null)
         personRepository.login(email, password, object : APIListener<PersonModel> {
             override fun onSuccess(result: PersonModel) {
                 securityPreferences.store(TaskConstants.SHARED.TOKEN_KEY, result.token)

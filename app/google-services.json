@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "236612577548",
+    "project_id": "task-kotlin",
+    "storage_bucket": "task-kotlin.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:236612577548:android:5c9bca6cfe9ed2de1c4129",
+        "android_client_info": {
+          "package_name": "com.android.taskskotlin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "236612577548-n4t8duuq45jb259q0gu7bdcvi0eoq483.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.android.taskskotlin",
+            "certificate_hash": "11d0ab715056620747df4fa23e62618f9c694830"
+          }
+        },
+        {
+          "client_id": "236612577548-spl0oc5rkpdhjbpdag3g53h0kr6vm9gp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS4JhYZvA1CICV-sQlTkiv1VHlXDyY6nI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "236612577548-spl0oc5rkpdhjbpdag3g53h0kr6vm9gp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
