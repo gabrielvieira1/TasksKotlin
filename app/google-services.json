@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "236612577548-q2nskme16go58kci74q34o5m2unlsiac.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.android.taskskotlin",
+            "certificate_hash": "518b697ab894ffd7b4dc434064764533183bd480"
+          }
+        },
+        {
           "client_id": "236612577548-spl0oc5rkpdhjbpdag3g53h0kr6vm9gp.apps.googleusercontent.com",
           "client_type": 3
         }
