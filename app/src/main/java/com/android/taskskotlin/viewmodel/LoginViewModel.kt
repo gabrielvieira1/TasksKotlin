@@ -1,7 +1,6 @@
 package com.android.taskskotlin.viewmodel
 
 import android.app.Application
-import android.widget.Toast
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialResponse
 import androidx.lifecycle.AndroidViewModel
@@ -22,11 +21,12 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.android.taskskotlin.utils.logITag
 import com.android.taskskotlin.utils.logETag
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.FirebaseUser
 
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
@@ -77,10 +77,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
         RetrofitClient.addHeaders(token, person)
 
-        // Se token e person key forem diferentes de vazio, usuário está logado
-        val logged = (token != "" && person != "")
+        val loggedWithAPI = (token.isNotEmpty() && person.isNotEmpty())
 
-        // Se usuário não estiver logado, aplicação vai atualizar os dados
+        val loggedWithFirebase = token.isNotEmpty() && person.isEmpty()
+
+        val logged = loggedWithAPI || loggedWithFirebase
+
         if (!logged) {
             priorityRepository.list(object : APIListener<List<PriorityModel>> {
                 override fun onSuccess(result: List<PriorityModel>) {
@@ -92,58 +94,83 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             })
         }
 
-        // Usuário está logado E possui autenticação biométrica
         _biometrics.value = logged && BiometricHelper.isBiometricAvailable(getApplication())
     }
 
     fun doLoginWithGoogle(result: GetCredentialResponse) {
-        // Handle the successfully returned credential.
         when (val credential = result.credential) {
-            // GoogleIdToken credential
             is CustomCredential -> {
                 if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    try {
-                        // Use googleIdTokenCredential and extract id to validate and
-                        // authenticate on your server.
-                        val googleIdTokenCredential = GoogleIdTokenCredential
-                            .createFrom(credential.data)
-
-                        GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                            .let {
-                                auth.signInWithCredential(it).addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        // Sign in success, update UI with the signed-in user's information
-                                        logITag("signInWithCredential:success")
-                                        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.SUCCESS)
-                                        auth.currentUser?.getIdToken(true)
-                                            ?.addOnCompleteListener { firebaseTask ->
-                                                if (firebaseTask.isSuccessful) {
-                                                    logITag("Firebase Token: ${firebaseTask.result.token}")
-                                                }
-                                            }
-                                    } else {
-                                        // If sign in fails, display a message to the user.
-                                        logETag("Received an invalid google id token response:")
-                                        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
-                                    }
-                                }
-                            }
-                    } catch (e: GoogleIdTokenParsingException) {
-                        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
-                        logETag("Received an invalid google id token response: $e")
-                    }
+                    handleGoogleIdTokenCredential(credential)
                 } else {
-                    // Catch any unrecognized custom credential type here.
-                    _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
-                    logETag("Unexpected type of credential")
+                    handleUnexpectedCredentialType()
                 }
             }
+            else -> handleUnexpectedCredentialType()
+        }
+    }
 
-            else -> {
-                // Catch any unrecognized credential type here.
-                _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
-                logETag("Unexpected type of credential")
+    private fun handleGoogleIdTokenCredential(credential: CustomCredential) {
+        try {
+            val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+            signInWithFirebase(firebaseCredential)
+        } catch (e: GoogleIdTokenParsingException) {
+            handleCredentialParsingError(e)
+        }
+    }
+
+    private fun signInWithFirebase(firebaseCredential: AuthCredential) {
+        auth.signInWithCredential(firebaseCredential).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                logITag("signInWithCredential:success")
+                val user = auth.currentUser
+                if (user != null) {
+                    handleSuccessfulSignIn(user)
+                } else {
+                    handleSignInFailure("User is null after successful sign-in.")
+                }
+            } else {
+                handleSignInFailure("Received an invalid google id token response:")
             }
         }
+    }
+
+    private fun handleSuccessfulSignIn(user: FirebaseUser) {
+        val displayName = user.displayName ?: ""
+        val email = user.email ?: ""
+
+        user.getIdToken(true).addOnCompleteListener { firebaseTask ->
+            if (firebaseTask.isSuccessful) {
+                val token = firebaseTask.result.token ?: ""
+                storeUserInformation(token, displayName, email)
+                _login.value = ValidationModel()
+            } else {
+                handleSignInFailure("Failed to retrieve Firebase token.")
+            }
+        }
+    }
+
+    private fun storeUserInformation(token: String, displayName: String, email: String) {
+        securityPreferences.store(TaskConstants.SHARED.TOKEN_KEY, token)
+        securityPreferences.store(TaskConstants.SHARED.PERSON_NAME, displayName)
+        securityPreferences.store(TaskConstants.SHARED.PERSON_EMAIL, email)
+
+        RetrofitClient.addHeaders(token, null)
+    }
+
+    private fun handleCredentialParsingError(e: GoogleIdTokenParsingException) {
+        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
+        logETag("Received an invalid google id token response: $e")
+    }
+
+    private fun handleUnexpectedCredentialType() {
+        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
+        logETag("Unexpected type of credential")
+    }
+
+    private fun handleSignInFailure(errorMessage: String) {
+        _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
+        logETag(errorMessage)
     }
 }

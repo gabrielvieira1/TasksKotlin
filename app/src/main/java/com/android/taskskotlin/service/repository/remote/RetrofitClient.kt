@@ -44,9 +44,11 @@ class RetrofitClient private constructor() {
             return getRetrofitInstance().create(serviceClass)
         }
 
-        fun addHeaders(tokenValue: String, personKeyValue: String) {
+        fun addHeaders(tokenValue: String, personKeyValue: String?) {
             token = tokenValue
-            personKey = personKeyValue
+            if (personKeyValue != null) {
+                personKey = personKeyValue
+            }
         }
     }
 }
