@@ -46,10 +46,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val _signInWithGoogleStatus = MutableLiveData<Constants.GoogleSignInStatus>()
     val signInWithGoogleStatus: LiveData<Constants.GoogleSignInStatus> get() = _signInWithGoogleStatus
 
-    /**
-     * Faz login usando API
-     */
-    fun doLogin(email: String, password: String) {
+    fun doLoginWithAPI(email: String, password: String) {
         Firebase.analytics.logEvent("log_button_click", null)
         personRepository.login(email, password, object : APIListener<PersonModel> {
             override fun onSuccess(result: PersonModel) {
@@ -66,35 +63,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _login.value = ValidationModel(message)
             }
         })
-    }
-
-    /**
-     * Verifica se usuário está logado e
-     */
-    fun verifyAuthentication() {
-        val token = securityPreferences.get(TaskConstants.SHARED.TOKEN_KEY)
-        val person = securityPreferences.get(TaskConstants.SHARED.PERSON_KEY)
-
-        RetrofitClient.addHeaders(token, person)
-
-        val loggedWithAPI = (token.isNotEmpty() && person.isNotEmpty())
-
-        val loggedWithFirebase = token.isNotEmpty() && person.isEmpty()
-
-        val logged = loggedWithAPI || loggedWithFirebase
-
-        if (!logged) {
-            priorityRepository.list(object : APIListener<List<PriorityModel>> {
-                override fun onSuccess(result: List<PriorityModel>) {
-                    priorityRepository.save(result)
-                }
-
-                override fun onFailure(message: String) {
-                }
-            })
-        }
-
-        _biometrics.value = logged && BiometricHelper.isBiometricAvailable(getApplication())
     }
 
     fun doLoginWithGoogle(result: GetCredentialResponse) {
@@ -172,5 +140,31 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private fun handleSignInFailure(errorMessage: String) {
         _signInWithGoogleStatus.postValue(Constants.GoogleSignInStatus.FAILURE)
         logETag(errorMessage)
+    }
+
+    fun verifyAuthentication() {
+        val token = securityPreferences.get(TaskConstants.SHARED.TOKEN_KEY)
+        val person = securityPreferences.get(TaskConstants.SHARED.PERSON_KEY)
+
+        RetrofitClient.addHeaders(token, person)
+
+        val loggedWithAPI = (token.isNotEmpty() && person.isNotEmpty())
+
+        val loggedWithFirebase = token.isNotEmpty() && person.isEmpty()
+
+        val logged = loggedWithAPI || loggedWithFirebase
+
+        if (!logged) {
+            priorityRepository.list(object : APIListener<List<PriorityModel>> {
+                override fun onSuccess(result: List<PriorityModel>) {
+                    priorityRepository.save(result)
+                }
+
+                override fun onFailure(message: String) {
+                }
+            })
+        }
+
+        _biometrics.value = logged && BiometricHelper.isBiometricAvailable(getApplication())
     }
 }

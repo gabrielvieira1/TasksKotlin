@@ -129,6 +129,6 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener {
         val email = binding.editEmail.text.toString()
         val password = binding.editPassword.text.toString()
 
-        viewModel.doLogin(email, password)
+        viewModel.doLoginWithAPI(email, password)
     }
 }
