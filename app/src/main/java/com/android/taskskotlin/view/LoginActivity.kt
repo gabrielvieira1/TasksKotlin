@@ -82,7 +82,7 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener {
                     context = this@LoginActivity,
                 )
                 viewModel.doLoginWithGoogle(result)
-                Toast.makeText(applicationContext, "Successful login", Toast.LENGTH_SHORT).show()
+                //Toast.makeText(applicationContext, "Successful login", Toast.LENGTH_SHORT).show()
             } catch (e: GetCredentialException) {
                 logException(e)
             }

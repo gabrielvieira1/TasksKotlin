@@ -1,6 +1,8 @@
 package com.android.taskskotlin.service.repository.remote
 
 import com.android.taskskotlin.service.constants.TaskConstants
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -11,8 +13,40 @@ class RetrofitClient private constructor() {
 
     companion object {
         private lateinit var INSTANCE: Retrofit
-        private var token: String = "5PQhcjxm0865BVPZ9FlvYz0RH2ss5S+CQ5nXVPjRn/bziIRh4QIVVQ=="
-        private var personKey: String = "YB5baW54MSM9ER9rLOUvgkOZ11T40Z/284iEYeECFVU="
+        private var token: String? = null
+        private var personKey: String? = null
+        private val remoteConfig: FirebaseRemoteConfig by lazy {
+            FirebaseRemoteConfig.getInstance()
+        }
+
+        // Inicializa e busca as configurações do Firebase Remote Config
+        private fun initializeRemoteConfig() {
+            val configSettings = FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(3600) // Intervalo mínimo para buscar novas configs
+                .build()
+            remoteConfig.setConfigSettingsAsync(configSettings)
+
+            // Definir valores padrão locais (opcional)
+            val defaults: Map<String, Any> = mapOf(
+                "api_token" to "default_token_value",
+                "person_key" to "default_person_key_value"
+            )
+            remoteConfig.setDefaultsAsync(defaults)
+
+            // Busca valores atualizados do Remote Config
+            remoteConfig.fetchAndActivate()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        // Valores obtidos com sucesso do Firebase Remote Config
+                        token = remoteConfig.getString("api_token")
+                        personKey = remoteConfig.getString("person_key")
+                    } else {
+                        // Lida com falha na obtenção dos valores
+                        token = defaults["api_token"] as String
+                        personKey = defaults["person_key"] as String
+                    }
+                }
+        }
 
         private fun getRetrofitInstance(): Retrofit {
             val httpClient = OkHttpClient.Builder()
